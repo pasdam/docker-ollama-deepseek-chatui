@@ -1,0 +1,38 @@
+services:
+  ollama:
+    image: ollama/ollama:${OLLAMA_IMAGE_VERSION}
+    volumes:
+      - ./ollama/data:/root/.ollama
+
+  ollama-init:
+    image: alpine/curl:${CURL_IMAGE_VERSION}
+    command: -X POST http://ollama:11434/api/pull -d '{"model":"${OLLAMA_MODEL}"}'
+    depends_on:
+      - ollama
+
+  chat-ui:
+    image: ghcr.io/huggingface/chat-ui-db:${CHAT_UI_IMAGE_VERSION}
+    volumes:
+      - ./chat-ui/db:/data/db
+    environment:
+      MODELS: >
+        [
+          {
+            "name": "Ollama DeepSeek",
+            "chatPromptTemplate": "",
+            "parameters": {
+              "stop": ["</s>"]
+            },
+            "endpoints": [
+              {
+                "type": "ollama",
+                "url" : "http://ollama:11434",
+                "ollamaName" : "${OLLAMA_MODEL}"
+              }
+            ]
+          }
+        ]
+    ports:
+      - 3000:3000
+    depends_on:
+      - ollama-init
